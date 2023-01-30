@@ -16,7 +16,7 @@ env:
 
 jobs:
   update:
-    if: github.repository == euromoney-public/mdr-supporting-files
+    if: github.repository == 'euromoney-public/mdr-supporting-files'
     name: Update
     runs-on: 'ubuntu-latest'
 
