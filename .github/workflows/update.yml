@@ -48,7 +48,7 @@ jobs:
             echo SysmonUpdateRequired=true>>$GITHUB_ENV
           fi
 
-      - uses: FTsbrown/msteams-action@master
+      - uses: FTsbrown/msteams-action@v1.0.1
         if: env.NxLogUpdateRequired == 'true'
         with:
           MS_TEAMS_WEBHOOK: ${{ secrets.MS_TEAMS_NOTIFY_WEBHOOK }}
@@ -56,7 +56,7 @@ jobs:
           BODY: |
             Please review the update required for NxLog: https://github.com/euromoney-public/mdr-supporting-files
 
-      - uses: FTsbrown/msteams-action@master
+      - uses: FTsbrown/msteams-action@v1.0.1
         if: env.SysmonUpdateRequired == 'true'
         with:
           MS_TEAMS_WEBHOOK: ${{ secrets.MS_TEAMS_NOTIFY_WEBHOOK }}
