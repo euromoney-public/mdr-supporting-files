@@ -110,6 +110,7 @@ install_deb() {
     $sudo_cmd apt-get install -y apt-transport-https curl gnupg
     $sudo_cmd bash -c "echo deb [arch=amd64] https://agent-packageserver.alienvault.cloud/repo/deb/ stable main > /etc/apt/sources.list.d/alienvault-agent.list"
 
+    export DEBIAN_FRONTEND=noninteractive
     curl -sS https://agent-packageserver.alienvault.cloud/repo/GPG.key | $sudo_cmd apt-key add -
     $sudo_cmd apt-get update
     $sudo_cmd apt-get install -y alienvault-agent=20.08.0003.0301
