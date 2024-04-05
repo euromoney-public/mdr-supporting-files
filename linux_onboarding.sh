@@ -247,7 +247,7 @@ install_package() {
     }
 
     # Check for dnf (Fedora/AL2023)
-    elif command -v dnf > /dev/null; then
+    if command -v dnf > /dev/null; then
         echo "Using dnf to install ${package_name}..."
         dnf_install_with_retry "${package_name}"
 
