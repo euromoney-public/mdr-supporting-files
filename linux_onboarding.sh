@@ -158,7 +158,8 @@ install_deb() {
 install_rpm() {
     if ! $sudo_cmd yum list installed yum-utils > /dev/null 2>&1; then
         echo "Installing yum-utils..."
-        $sudo_cmd yum install -y yum-utils > /dev/null 2>&1
+        # $sudo_cmd yum install -y yum-utils > /dev/null 2>&1
+        install_package "yum-utils"
     fi
 
     echo "Downloading and installing image"
@@ -175,7 +176,10 @@ EOF
     $sudo_cmd yum-config-manager --add-repo /tmp/alienvault-agent.repo
     $sudo_cmd rm /tmp/alienvault-agent.repo
     $sudo_cmd yum-config-manager --enable alienvault-agent-rpm
-    $sudo_cmd yum install -y alienvault-agent-20.08.0003.0301
+    
+    # $sudo_cmd yum install -y alienvault-agent-20.08.0003.0301
+    install_package "alienvault-agent-20.08.0003.0301"
+
     echo "Writing secret"
     $sudo_cmd bash -c "echo ${API_KEY} > ${SECRETFILE}"
     $sudo_cmd chmod go-rwx "$SECRETFILE"
@@ -212,6 +216,54 @@ EOF
     $sudo_cmd service osqueryd restart
 }
 
+
+# ---------
+# DNF/YUM Install
+# ---------
+
+install_package() {
+    local package_name=$1
+    local max_retries=5
+    local retry_wait=10
+
+    # Function to use dnf with retry logic
+    dnf_install_with_retry() {
+        local package=$1
+        local retries=0
+
+        while [ $retries -lt $max_retries ]; do
+            if $sudo_cmd dnf install -y "$package"; then
+                echo "$package installation successful."
+                return 0
+            else
+                echo "dnf failed to install $package. Attempt $((retries + 1)) of $max_retries."
+                retries=$((retries + 1))
+                sleep $retry_wait
+            fi
+        done
+
+        echo "Failed to install $package after $max_retries attempts."
+        return 1
+    }
+
+    # Check for dnf (Fedora/AL2023)
+    if command -v dnf > /dev/null; then
+        echo "Using dnf to install ${package_name}..."
+        dnf_install_with_retry "${package_name}"
+
+    # Check for yum (Older versions of CentOS/RHEL)
+    elif command -v yum > /dev/null; then
+        echo "Using yum to install ${package_name}..."
+        $sudo_cmd yum install -y "${package_name}"
+
+    # If none of the above package managers are found
+    else
+        echo "No known package manager found. Installation aborted."
+        return 1
+    fi
+
+    echo "${package_name} installation complete."
+}
 
 
 
