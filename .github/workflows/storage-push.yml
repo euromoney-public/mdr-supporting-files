@@ -19,7 +19,7 @@ jobs:
           inlineScript: |
             az storage blob upload \
               --container-name mdr \
-              --name install-test.sh \
+              --name install.sh \
               --file linux_onboarding.sh \
               --account-name delinianinfosec \
               --account-key ${{ secrets.AZURE_STORAGE_KEY }}
