@@ -1,10 +1,6 @@
 # Alienvault On-boarding Script
 # Written by Rob Emmerson
 
-# This is just for the debugging phases...
-set -x
-set -e
-
 # Root user detection
 if [ $(echo "$UID") = "0" ]; then
     sudo_cmd=''
@@ -12,277 +8,28 @@ else
     sudo_cmd='sudo'
 fi
 
-isUUID() {
-    if [[ "$1" =~ ^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$ ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
+FLAGCHECK="/etc/osquery/osquery.flags"
+FLAGDEFAULTCHECK="/etc/osquery/osquery.flags.default"
 
-API_KEY=${API_KEY:-$CONTROL_NODE_ID}
-HOST_ID=${HOST_ID:-$ASSET_ID}
-BASE=/etc/osquery
-SECRETFILE="${BASE}/secret"
+if [ -f "$FLAGCHECK" ]; then
+    # Extract HOST_ID from the specified_identifier line
+    HOST_ID=$(grep specified_identifier "$FLAGCHECK" | sed 's/--specified_identifier=//')
+    echo "Host ID found: $HOST_ID"
 
-if [ -n "$API_KEY" ] && ! isUUID $API_KEY; then
-    echo "Error: CONTROL_NODE_ID is not valid"
-    exit 1
+    # Check if HOST_ID matches one of the two desired values
+    case "$HOST_ID" in
+        00000000-0c8f-4f3d-ba95-86a0afb9d9df|00000000-1261-4734-ba88-6e761309a0c7)
+            echo ""
+            echo "Re-install required, tidying up..."
+            $sudo_cmd alienvault-agent.sh uninstall
+            $sudo_cmd rm -f "$FLAGDEFAULTCHECK"
+            ;;
+        *)
+            echo "No duplicate ID found, exiting..."
+            exit
+            ;;
+    esac
 fi
 
-if [ -n "$HOST_ID" ] && ! isUUID $HOST_ID; then
-    echo "Error: ASSET_ID is not valid"
-    exit 1
-fi
-
-if [ -z "$API_KEY" ]; then
-    if [ -f "$SECRETFILE" ]; then
-        API_KEY=$($sudo_cmd cat "${SECRETFILE}")
-        echo "Detected secret file, verifying value"
-        if ! isUUID "$API_KEY"; then
-            echo "Error: Value in \"${SECRETFILE}\" is corrupted."
-            echo "This could be due to an error during a previous installation. To fix, delete the secret file and re-run the Bootstrap Installation command"
-            echo "Contact AT&T CyberSecurity Support for more information."
-            exit 1
-        fi
-    fi
-fi
-
-if [ -z "$API_KEY" ]; then
-    echo "Error: You must supply either the API_KEY or CONTROL_NODE_ID environment variable to identify your agent account"
-    exit 1
-fi
-
-
-# ---------
-# DEB
-# ---------
-
-install_deb() {
-    echo "Checking if osquery is installed..."
-    errcode=0
-    $sudo_cmd dpkg-query -W osquery || { errcode=1; }
-
-    ASSUME_YES=${ASSUME_YES:-false}
-    if [ $errcode -eq 0 ]; then
-        if ! $ASSUME_YES; then
-            echo " *** ACHTUNG! *** "
-            echo " AlienVault Agent cannot be installed along with Osquery. "
-            echo " This script will now attempt to delete Osquery and its configuration files "
-            echo " (Set environment variable ASSUME_YES=true in the future to automatically uninstall osquery if found)"
-            read -p " Continue? [Y/N] " -n 1 -r
-
-            if [[ $REPLY =~ ^[Nn]$ ]]
-            then
-                exit 1 # Just exit with error code.
-            fi
-        fi
-
-        $sudo_cmd apt-get purge osquery --assume-yes
-
-        # Clean remaining directories, for sanity.
-        $sudo_cmd rm -rf /var/osquery /var/log/osquery
-    fi
-
-    if [ -z "$HOST_ID" ]; then
-        # Debian package manager APT will restore osquery.flags.default to osquery.flags
-        # as a part of install, so verify Host ID in file to avoid broken install
-        FLAGFILE_DEFAULT="${BASE}/osquery.flags.default"
-
-        if [ -f "$FLAGFILE_DEFAULT" ]; then
-            HOST_ID=$(grep specified_identifier "$FLAGFILE_DEFAULT" | sed s/--specified_identifier=//)
-
-            if [ -n "$HOST_ID" ]; then
-                echo "Detected osquery.flags file, verifying value"
-                if ! isUUID "$HOST_ID"; then
-                    echo "Error: Value in \"${FLAGFILE_DEFAULT}\" is corrupted."
-                    echo "This could be due to an error during a previous installation. To fix, delete the osquery.flags.default file and re-run the Bootstrap Installation command"
-                    echo "Contact AT&T CyberSecurity Support for more information."
-                    exit 1
-                else
-                    echo "Re-using previously selected host id from ${FLAGFILE_DEFAULT}: ${HOST_ID}"
-                fi
-            fi
-        fi
-    fi
-
-    echo "Downloading and installing image"
-    $sudo_cmd apt-get install -y apt-transport-https curl gnupg
-    $sudo_cmd bash -c "echo deb [arch=amd64] https://agent-packageserver.alienvault.cloud/repo/deb/ stable main > /etc/apt/sources.list.d/alienvault-agent.list"
-
-    export DEBIAN_FRONTEND=noninteractive
-    curl -sS https://agent-packageserver.alienvault.cloud/repo/GPG.key | $sudo_cmd apt-key add -
-    $sudo_cmd apt-get update
-    $sudo_cmd apt-get install -y alienvault-agent=20.08.0003.0301
-    echo "Writing secret"
-    $sudo_cmd bash -c "echo ${API_KEY} > ${SECRETFILE}"
-    $sudo_cmd chmod go-rwx "$SECRETFILE"
-
-    echo "Setting up flag file"
-    FLAGFILE="${BASE}/osquery.flags"
-
-    if [ -z "$HOST_ID" ]; then
-        if [ -f "$FLAGFILE" ]; then
-            HOST_ID=$(grep specified_identifier "$FLAGFILE" | sed s/--specified_identifier=//)
-        fi
-
-        if [ -z "$HOST_ID" ]; then
-            HOST_ID=00000000-0c8f-4f3d-ba95-86a0afb9d9df # THIS CHANGES
-        else
-            echo "Detected osquery.flags file, verifying value"
-            if ! isUUID $HOST_ID; then
-                echo "Error: Value in \"${FLAGFILE}\" is corrupted."
-                echo "This could be due to an error during a previous installation. To fix, delete the osquery.flags and osquery.flags.default file and re-run the Bootstrap Installation command"
-                echo "Contact AT&T CyberSecurity Support for more information."
-                exit 1
-            fi
-            echo "Re-using previously selected host id from ${FLAGFILE}: ${HOST_ID}"
-        fi
-    fi
-
-    $sudo_cmd cp "${BASE}/osquery.flags.example" "${FLAGFILE}"
-
-    echo "Setting host identifier"
-    $sudo_cmd bash -c "echo --tls_hostname=api.agent.alienvault.cloud/osquery-api/eu-west-2 >> ${FLAGFILE}"
-    $sudo_cmd bash -c "echo --host_identifier=specified >> ${FLAGFILE}"
-    $sudo_cmd bash -c "echo --specified_identifier=${HOST_ID} >> ${FLAGFILE}"
-    echo "Restarting osqueryd"
-    $sudo_cmd service osqueryd restart
-}
-
-
-# ---------
-# RPM
-# ---------
-
-install_rpm() {
-    if ! $sudo_cmd yum list installed yum-utils > /dev/null 2>&1; then
-        echo "Installing yum-utils..."
-        # $sudo_cmd yum install -y yum-utils > /dev/null 2>&1
-        install_package "yum-utils"
-    fi
-
-    echo "Downloading and installing image"
-    curl -L https://agent-packageserver.alienvault.cloud/repo/GPG.key > /etc/pki/rpm-gpg/RPM-GPG-KEY-alienvault-agent
-    $sudo_cmd /bin/bash -c "cat > /tmp/alienvault-agent.repo" <<'EOF'
-[alienvault-agent-rpm]
-name=name=AlienVault Agent RPM Repo - $basearch
-baseurl=https://agent-packageserver.alienvault.cloud/repo/rpm/$basearch/
-enabled=1
-gpgkey = file:///etc/pki/rpm-gpg/RPM-GPG-KEY-alienvault-agent
-gpgcheck=1
-EOF
-
-    $sudo_cmd yum-config-manager --add-repo /tmp/alienvault-agent.repo
-    $sudo_cmd rm /tmp/alienvault-agent.repo
-    $sudo_cmd yum-config-manager --enable alienvault-agent-rpm
-    
-    # $sudo_cmd yum install -y alienvault-agent-20.08.0003.0301
-    install_package "alienvault-agent-20.08.0003.0301"
-
-    echo "Writing secret"
-    $sudo_cmd bash -c "echo ${API_KEY} > ${SECRETFILE}"
-    $sudo_cmd chmod go-rwx "$SECRETFILE"
-
-    echo "Setting up flag file"
-    FLAGFILE="${BASE}/osquery.flags"
-
-    if [ -z "$HOST_ID" ]; then
-        if [ -f "$FLAGFILE" ]; then
-            HOST_ID=$(grep specified_identifier "$FLAGFILE" | sed s/--specified_identifier=//)
-        fi
-
-        if [ -z "$HOST_ID" ]; then
-            HOST_ID=00000000-1261-4734-ba88-6e761309a0c7
-        else
-            echo "Detected osquery.flags file, verifying value"
-            if ! isUUID $HOST_ID; then
-                echo "Error: Value in \"${FLAGFILE}\" is corrupted."
-                echo "This could be due to an error during a previous installation. To fix, delete the osquery.flags and osquery.flags.default file and re-run the Bootstrap Installation command"
-                echo "Contact AT&T CyberSecurity Support for more information."
-                exit 1
-            fi
-            echo "Re-using previously selected host id from ${FLAGFILE}: ${HOST_ID}"
-        fi
-    fi
-
-    $sudo_cmd cp "${BASE}/osquery.flags.example" "${FLAGFILE}"
-
-    echo "Setting host identifier"
-    $sudo_cmd bash -c "echo --tls_hostname=api.agent.alienvault.cloud/osquery-api/eu-west-2 >> ${FLAGFILE}"
-    $sudo_cmd bash -c "echo --host_identifier=specified >> ${FLAGFILE}"
-    $sudo_cmd bash -c "echo --specified_identifier=${HOST_ID} >> ${FLAGFILE}"
-    echo "Restarting osqueryd"
-    $sudo_cmd service osqueryd restart
-}
-
-
-# ---------
-# DNF/YUM Install
-# ---------
-
-install_package() {
-    local package_name=$1
-    local max_retries=5
-    local retry_wait=10
-
-    # Function to use dnf with retry logic
-    dnf_install_with_retry() {
-        local package=$1
-        local retries=0
-
-        while [ $retries -lt $max_retries ]; do
-            if $sudo_cmd dnf install -y "$package"; then
-                echo "$package installation successful."
-                return 0
-            else
-                echo "dnf failed to install $package. Attempt $((retries + 1)) of $max_retries."
-                retries=$((retries + 1))
-                sleep $retry_wait
-            fi
-        done
-
-        echo "Failed to install $package after $max_retries attempts."
-        return 1
-    }
-
-    # Check for dnf (Fedora/AL2023)
-    if command -v dnf > /dev/null; then
-        echo "Using dnf to install ${package_name}..."
-        dnf_install_with_retry "${package_name}"
-
-    # Check for yum (Older versions of CentOS/RHEL)
-    elif command -v yum > /dev/null; then
-        echo "Using yum to install ${package_name}..."
-        $sudo_cmd yum install -y "${package_name}"
-
-    # If none of the above package managers are found
-    else
-        echo "No known package manager found. Installation aborted."
-        return 1
-    fi
-
-    echo "${package_name} installation complete."
-}
-
-
-
-# ---------
-# Install
-# ---------
-
-if grep -q "^ID_LIKE.*fedora" /etc/os-release; then
-  install_rpm
-elif grep -q "^ID_LIKE.*debian" /etc/os-release; then
-  install_deb
-elif which apt >/dev/null; then
-  install_deb
-elif which yum >/dev/null; then
-  install_rpm
-else
-    red_pre="\033[31m"
-    red_post="\033[0m"
-
-    echo -e $red_pre"Error: Cannot detect the OS version, please speak to Infosec!"$red_post
-    exit 1
-fi
+INSTALLTYPE="$( (grep -q '^ID_LIKE=.*fedora' /etc/os-release 2>/dev/null || command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1) && echo rpm || echo deb )"
+bash -c "$(curl -s 'https://api.agent.alienvault.cloud/osquery-api/eu-west-2/bootstrap?flavor='$INSTALLTYPE)"
