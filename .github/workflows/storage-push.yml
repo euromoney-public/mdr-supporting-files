@@ -1,0 +1,25 @@
+name: Publish Linux MDR Script
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  upload-to-azure-storage:
+    name: Upload Script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Upload file to Azure Storage
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob upload \
+              --container-name mdr \
+              --name install-test.sh \
+              --file linux_onboarding.sh \
+              --account-name delinianinfosec \
+              --account-key ${{ secrets.AZURE_STORAGE_KEY }}
