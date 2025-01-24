@@ -31,13 +31,5 @@ if [ -f "$FLAGCHECK" ]; then
     esac
 fi
 
-
-# INSTALLTYPE=deb
-# if grep -q "^ID_LIKE.*fedora" /etc/os-release; then
-#   INSTALLTYPE=rpm
-# elif which yum >/dev/null; then
-#   INSTALLTYPE=rpm
-
-INSTALLTYPE="$( (grep -q '^ID_LIKE=.*fedora' /etc/os-release 2>/dev/null || command -v yum >/dev/null 2>&1) && echo rpm || echo deb )";
-
+INSTALLTYPE="$( (grep -q '^ID_LIKE=.*fedora' /etc/os-release 2>/dev/null || command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1) && echo rpm || echo deb )"
 bash -c "$(curl -s 'https://api.agent.alienvault.cloud/osquery-api/eu-west-2/bootstrap?flavor='$INSTALLTYPE)"
