@@ -25,6 +25,7 @@ jobs:
               --container-name mdr \
               --name install.sh \
               --file linux_onboarding.sh \
+              --overwrite \
               --account-name delinianinfosec \
               --account-key ${{ secrets.AZURE_STORAGE_KEY }}
 
@@ -36,5 +37,6 @@ jobs:
               --container-name mdr \
               --name install-ipv6.sh \
               --file install-ipv6.sh \
+              --overwrite \
               --account-name delinianinfosec \
               --account-key ${{ secrets.AZURE_STORAGE_KEY }}
