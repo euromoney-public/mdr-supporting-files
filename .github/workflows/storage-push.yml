@@ -13,11 +13,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: IPv6 Tweaks
+      - name: Tweaks
         run: |
+          sed 's/curl\ -s/curl\ -s4/' linux_onboarding.sh >install-ipv4.sh
           sed 's/curl\ -s/curl\ -s6/' linux_onboarding.sh >install-ipv6.sh
 
-      - name: Upload IPv4 file to Azure Storage
+      - name: Upload Generic file to Azure Storage
         uses: azure/CLI@v2
         with:
           inlineScript: |
@@ -25,6 +26,18 @@ jobs:
               --container-name mdr \
               --name install.sh \
               --file linux_onboarding.sh \
+              --overwrite \
+              --account-name delinianinfosec \
+              --account-key ${{ secrets.AZURE_STORAGE_KEY }}
+
+      - name: Upload IPv4 file to Azure Storage
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob upload \
+              --container-name mdr \
+              --name install-ipv4.sh \
+              --file install-ipv4.sh \
               --overwrite \
               --account-name delinianinfosec \
               --account-key ${{ secrets.AZURE_STORAGE_KEY }}
