@@ -8,8 +8,8 @@ else
     sudo_cmd='sudo'
 fi
 
-FLAGCHECK="/etc/osquery/osquery.flags"
-FLAGDEFAULTCHECK="/etc/osquery/osquery.flags.default"
+export FLAGCHECK="/etc/osquery/osquery.flags"
+export FLAGDEFAULTCHECK="/etc/osquery/osquery.flags.default"
 
 if [ -f "$FLAGCHECK" ]; then
     # Extract HOST_ID from the specified_identifier line
