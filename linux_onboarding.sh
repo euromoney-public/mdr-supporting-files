@@ -1,3 +1,4 @@
+#!/bin/bash
 # Alienvault On-boarding Script
 # Written by Rob Emmerson
 
