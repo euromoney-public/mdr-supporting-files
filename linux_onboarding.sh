@@ -23,6 +23,9 @@ if [ -f "$FLAGCHECK" ]; then
             echo "Re-install required, tidying up..."
             $sudo_cmd alienvault-agent.sh uninstall
             $sudo_cmd rm -f "$FLAGDEFAULTCHECK"
+            if [ -f "$FLAGCHECK" ]; then
+                rm -f "$FLAGCHECK"
+            fi
             ;;
         *)
             echo "No duplicate ID found, exiting..."
