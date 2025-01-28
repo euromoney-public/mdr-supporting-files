@@ -28,7 +28,7 @@ if [ -f "$FLAGCHECK" ]; then
             fi
             ;;
         *)
-            echo "No duplicate ID found, exiting..."
+            echo "Good news - this agent appears to be configured correctly, so no install is required! Please check with Rob Emmerson to confirm!"
             exit
             ;;
     esac
