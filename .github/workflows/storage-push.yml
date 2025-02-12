@@ -17,6 +17,7 @@ jobs:
         run: |
           sed 's/curl\ -s/curl\ -s4/' linux_onboarding.sh >install-ipv4.sh
           sed 's/curl\ -s/curl\ -s6/' linux_onboarding.sh >install-ipv6.sh
+          sed 's/curl\ -s/curl\ -sk/' linux_onboarding.sh >install-insecure.sh
 
       - name: Upload Generic file to Azure Storage
         uses: azure/CLI@v2
@@ -50,6 +51,18 @@ jobs:
               --container-name mdr \
               --name install-ipv6.sh \
               --file install-ipv6.sh \
+              --overwrite \
+              --account-name delinianinfosec \
+              --account-key ${{ secrets.AZURE_STORAGE_KEY }}
+
+      - name: Upload insecure file to Azure Storage
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob upload \
+              --container-name mdr \
+              --name install-insecure.sh \
+              --file install-insecure.sh \
               --overwrite \
               --account-name delinianinfosec \
               --account-key ${{ secrets.AZURE_STORAGE_KEY }}
