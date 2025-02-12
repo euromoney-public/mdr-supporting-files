@@ -8,6 +8,12 @@ else
     sudo_cmd='sudo'
 fi
 
+export ARCH=$(uname -m)
+if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
+    echo "This system is running on an ARM64 architecture, exiting..."
+    exit
+fi
+
 export FLAGCHECK="/etc/osquery/osquery.flags"
 export FLAGDEFAULTCHECK="/etc/osquery/osquery.flags.default"
 
