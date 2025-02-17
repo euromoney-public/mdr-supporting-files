@@ -24,7 +24,7 @@ if [ -f "$FLAGCHECK" ]; then
 
     # Check if HOST_ID matches one of the two desired values
     case "$HOST_ID" in
-        00000000-0c8f-4f3d-ba95-86a0afb9d9df|00000000-1261-4734-ba88-6e761309a0c7)
+        00000000-0c8f-4f3d-ba95-86a0afb9d9df|00000000-1261-4734-ba88-6e761309a0c7|00000000-0a70-48d5-baff-7ccbbecbe0f9)
             echo ""
             echo "Re-install required, tidying up..."
             $sudo_cmd alienvault-agent.sh uninstall
