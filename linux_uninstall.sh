@@ -17,23 +17,25 @@ fi
 if [ -f "/usr/bin/alienvault-agent.sh" ]; then
     $sudo_cmd alienvault-agent.sh uninstall
 
+    $sudo_cmd apt-get remove --purge -y alienvault-agent
+
     $sudo_cmd systemctl stop osqueryd
     $sudo_cmd systemctl disable osqueryd
 
     if [ -f "/lib/systemd/system/osqueryd.service" ]; then
-        $sudo_cmd rm -f "/lib/systemd/system/osqueryd.service"
+        $sudo_cmd rm -f /lib/systemd/system/osqueryd.service
     fi
 
     if [ -f "/usr/lib/systemd/system/osqueryd.service" ]; then
-        $sudo_cmd rm -f "/usr/lib/systemd/system/osqueryd.service"
+        $sudo_cmd rm -f /usr/lib/systemd/system/osqueryd.service
     fi
 
     if [ -f "/etc/init.d/osqueryd" ]; then
-        $sudo_cmd rm -f "/etc/init.d/osqueryd"
+        $sudo_cmd rm -f /etc/init.d/osqueryd
     fi
 
     $sudo_cmd systemctl daemon-reload
     $sudo_cmd systemctl reset-failed
 
-    $sudo_cmd rm -rf "/etc/osquery"
+    $sudo_cmd rm -rf /etc/osquery /var/osquery
 fi
