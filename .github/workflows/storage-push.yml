@@ -19,7 +19,7 @@ jobs:
           sed 's/curl\ -s/curl\ -s6/' linux_onboarding.sh >install-ipv6.sh
           sed 's/curl\ -s/curl\ -sk/' linux_onboarding.sh >install-insecure.sh
 
-      - name: Upload Generic file to Azure Storage
+      - name: Upload Linux Install Script to Azure Storage
         uses: azure/CLI@v2
         with:
           inlineScript: |
@@ -27,6 +27,18 @@ jobs:
               --container-name mdr \
               --name install.sh \
               --file linux_onboarding.sh \
+              --overwrite \
+              --account-name delinianinfosec \
+              --account-key ${{ secrets.AZURE_STORAGE_KEY }}
+
+      - name: Upload Linux Uninstall Script to Azure Storage
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az storage blob upload \
+              --container-name mdr \
+              --name uninstall.sh \
+              --file linux_uninstall.sh \
               --overwrite \
               --account-name delinianinfosec \
               --account-key ${{ secrets.AZURE_STORAGE_KEY }}

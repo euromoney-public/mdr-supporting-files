@@ -22,7 +22,7 @@ if [ -f "$FLAGCHECK" ]; then
     HOST_ID=$(grep specified_identifier "$FLAGCHECK" | sed 's/--specified_identifier=//')
     echo "Host ID found: $HOST_ID"
 
-    # Check if HOST_ID matches one of the two desired values
+    # Check if HOST_ID matches any of the known duplicated IDs
     case "$HOST_ID" in
         00000000-0c8f-4f3d-ba95-86a0afb9d9df|00000000-1261-4734-ba88-6e761309a0c7|00000000-0a70-48d5-baff-7ccbbecbe0f9)
             echo ""
